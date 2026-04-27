@@ -1,0 +1,21 @@
+# deps
+node_modules/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build outputs
+dist/
+out/
+.next/
+cache/
+
+# foundry
+contracts/out/
+contracts/cache/
+
+# misc
+.DS_Store
+*.log
