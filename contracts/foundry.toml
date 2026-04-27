@@ -5,3 +5,4 @@ libs = ["lib"]
 remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
+fs_permissions = [{ access = "read-write", path = "./deployments" }]
