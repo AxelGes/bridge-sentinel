@@ -58,11 +58,19 @@ If all the steps below hit their completion criteria, the project is done.
 
 ## Sponsors (3 tracks)
 
-- **Gensyn AXL** — peer-to-peer signed comms between the 3 agents (no central broker).
-- **0G Compute** — Risk Agent's LLM inference runs on 0G Compute (qwen3.6-plus or equivalent), giving the security verdict a verifiable inference trail.
-- **ENS** — agent identity, per-protocol monitoring config, and discovery. Targets the "Best ENS Integration for AI Agents" prize. Must be functional (no hardcoded values).
+- **Gensyn AXL** — peer-to-peer direct messaging between the 3 agents via AXL Go nodes. Each agent runs an AXL sidecar binary exposing a local HTTP API (`localhost:9002`). Messages are sent point-to-point using ed25519 public keys (no channels/topics — AXL is direct P2P, not pub/sub). Sender identity is verified via the `X-From-Peer-Id` header matched against ENS-stored pubkeys.
+- **0G Compute** — Risk Agent's LLM inference runs on 0G Compute. Testnet model: `qwen-2.5-7b-instruct` (mainnet has qwen3.6-plus, GLM-5-FP8, etc. but requires real 0G tokens). SDK: `@0glabs/0g-serving-broker` with an ethers.js wallet on the 0G chain. Responses include TEE attestation via `ZG-Res-Key` header, verifiable with `broker.inference.processResponse()`.
+- **ENS** — agent identity, per-protocol monitoring config, and discovery. Targets the "Best ENS Integration for AI Agents" prize. Must be functional (no hardcoded values). Uses viem `getEnsText()` for reads, `@ensdomains/ensjs` for writes/subname creation. Deployed on Sepolia ENS (free registration).
 
-The `pause()` flow is just a button in the dashboard that directly calls the contract via the connected wallet. the Anomaly Agent only watches on-chain events.
+The `pause()` flow is just a button in the dashboard that directly calls the contract via the connected wallet. The Anomaly Agent only watches on-chain events.
+
+### Sponsor SDK/Dependency Summary
+
+| Sponsor | Package / Binary | Auth | Network |
+|---------|-----------------|------|---------|
+| Gensyn AXL | Go binary (`git clone gensyn-ai/axl && go build`) | ed25519 keypair (`openssl genpkey -algorithm ed25519`) | P2P over Yggdrasil, local HTTP on `:9002` |
+| 0G Compute | `@0glabs/0g-serving-broker` + `ethers` | Wallet with 0G tokens (min 3 0G ledger + 1 0G/provider) | 0G testnet RPC: `https://evmrpc-testnet.0g.ai` |
+| ENS | `viem` (reads) + `@ensdomains/ensjs` (writes) | Wallet on Sepolia | Sepolia testnet |
 
 ---
 
@@ -89,8 +97,8 @@ graph TB
 
     Bridge --> ConfigAgent
     Lending --> AnomalyAgent
-    ConfigAgent -- "AXL signal" --> RiskAgent
-    AnomalyAgent -- "AXL signal" --> RiskAgent
+    ConfigAgent -- "AXL direct msg\n(POST /send to Risk pubkey)" --> RiskAgent
+    AnomalyAgent -- "AXL direct msg\n(POST /send to Risk pubkey)" --> RiskAgent
     RiskAgent -- "prompt" --> ZeroG
     ENS -- "resolve" --> ConfigAgent
     ENS -- "resolve" --> AnomalyAgent
@@ -109,8 +117,11 @@ Flat layout, one independent project per folder. No workspaces, no turbo, no sha
 - `contracts/` — Solidity (Foundry preferred). Mock OFT bridge, fake rsETH, mock lending market.
 - `agents/config/` — Config Agent (Node + viem).
 - `agents/anomaly/` — Anomaly Agent (Node + viem).
-- `agents/risk/` — Risk Agent (Node + 0G Compute SDK).
+- `agents/risk/` — Risk Agent (Node + `@0glabs/0g-serving-broker` + `ethers`).
+- `agents/transport/` — Shared transport abstraction: `LocalTransport` (HTTP stub) and `AxlTransport` (AXL sidecar wrapper). Tiny module, copy into each agent or import from here.
 - `scripts/demo/` — KelpDAO replay script (Node + viem).
+- `scripts/setup-ens/` — ENS setup script: register subnames, set text records (Node + `@ensdomains/ensjs`).
+- `axl/` — AXL node configs and keypairs (`.pem` files in `.gitignore`). Built binary lives here too.
 
 Shared TS types between agents are kept dead simple: copy-paste a small `types.ts` into each agent folder when needed. If/when it gets annoying we promote it later — not before.
 
@@ -166,7 +177,7 @@ What:
 
 - Node service that polls the bridge contract every 15s with viem.
 - Reads DVN config and applies a scoring rule: `1-of-1 = 2/10`, `1-of-2 = 4/10`, `2-of-3 = 7/10`, `3-of-5 = 9/10`.
-- Emits a `ConfigSignal { protocol, contract, score, summary, evidence, timestamp }` over AXL (stub local in-memory bus until Step 6).
+- Emits a `ConfigSignal { protocol, contract, score, summary, evidence, timestamp }` via a transport abstraction (stub: local HTTP POST to Risk Agent on localhost; Step 6 replaces with AXL `POST /send` to Risk Agent's pubkey).
 
 Done when:
 
@@ -180,7 +191,7 @@ What:
 - viem `watchContractEvent` against `MockLending` for `Deposit` and `Borrow`.
 - Stateful detector: same wallet deposits >X% of an asset's supply AND borrows >Y% LTV within Z minutes → emit anomaly.
 - For the demo we tune thresholds so the KelpDAO replay reliably trips the detector.
-- Emits `AnomalySignal { wallet, asset, depositAmount, borrowAmount, ltv, severity, txHashes, timestamp }`.
+- Emits `AnomalySignal { wallet, asset, depositAmount, borrowAmount, ltv, severity, txHashes, timestamp }` via the same transport abstraction as Config Agent (local HTTP stub → AXL in Step 6).
 
 Done when:
 
@@ -191,48 +202,59 @@ Done when:
 
 What:
 
-- Subscribes to both signal types.
+- Receives signals from Config and Anomaly agents (via local HTTP stub, replaced by AXL in Step 6).
 - Builds a structured prompt: "You are a DeFi security agent. Given this config signal and this anomaly signal, output JSON `{score: 0-10, explanation, recommended_action}`."
-- Calls **0G Compute** SDK (e.g. `qwen3.6-plus` or `GLM-5-FP8`).
-- Stores last N decisions in memory and exposes them over AXL + an HTTP endpoint for the dashboard.
+- Calls **0G Compute** via `@0glabs/0g-serving-broker` SDK with an ethers.js wallet on the 0G testnet chain (`https://evmrpc-testnet.0g.ai`). Model: `qwen-2.5-7b-instruct` (testnet). The broker handles auth headers and payment.
+- Verifies response integrity via `broker.inference.processResponse(providerAddress, chatID)` — TEE attestation.
+- Stores last N decisions in memory and exposes them over an HTTP endpoint for the dashboard.
+
+Setup prerequisite: Fund the 0G wallet with testnet 0G tokens (min 3 0G for ledger creation, 1 0G per provider sub-account). Use `broker.ledger.depositFund()` and `broker.ledger.transferFund()`.
 
 Done when:
 
 - Feeding mock signals via a test harness produces a valid JSON `RiskScore` in <10s.
 - The 0G Compute call is real (no Claude/OpenAI fallback in the final demo path).
+- The `ZG-Res-Key` header is captured and verification passes.
 - The KelpDAO scenario consistently produces score >= 9.
 
 ### Step 6 — Gensyn AXL integration (BearPrince, ~4h)
 
 What:
 
-- Each agent process runs as its own AXL node with its own keypair.
-- Config + Anomaly publish to a single channel; Risk subscribes.
-- Each message is signed; receivers verify against the publisher's ENS-registered pubkey (Step 7).
-- Replace the in-memory bus from Steps 3-5 with real AXL.
+- Build the AXL Go binary: `git clone https://github.com/gensyn-ai/axl.git && cd axl && go build -o node ./cmd/node/` (requires Go 1.25.x; use `GOTOOLCHAIN=go1.25.5` if on Go 1.26+).
+- Generate 3 ed25519 keypairs (`openssl genpkey -algorithm ed25519 -out private-<agent>.pem`), one per agent.
+- Each agent process runs alongside its own AXL node sidecar (separate Go process). Config on ports: Config=9002, Anomaly=9012, Risk=9022 (configurable via `api_port` / `tcp_port` in `node-config.json`).
+- Config + Anomaly send messages directly to Risk Agent's pubkey via `POST http://localhost:<port>/send` with `X-Destination-Peer-Id: <risk_pubkey>`. Risk Agent polls `GET /recv` for incoming signals.
+- Receiver verifies sender identity: the `X-From-Peer-Id` response header must match the pubkey stored in ENS for that agent (Step 7). No application-level signing needed — AXL's transport-layer ed25519 identity provides authenticity.
+- Replace the local HTTP stub transport from Steps 3-5 with AXL send/recv calls.
+
+Peer config: each node's `node-config.json` lists the other nodes in `"Peers": ["tls://<ip>:<tcp_port>"]`. For local dev, all nodes peer with each other on localhost.
 
 Done when:
 
-- All 3 agents run as 3 separate processes, connected only via AXL.
+- All 3 agents run as 3 separate processes + 3 AXL node sidecars, connected only via AXL.
 - Killing the Anomaly Agent process → Config Agent and Risk Agent keep working; bringing it back → it rejoins automatically.
-- Tampering with a signal payload (manual test) makes the Risk Agent reject it.
+- Risk Agent rejects messages where `X-From-Peer-Id` doesn't match a known agent pubkey from ENS.
 
 ### Step 7 — ENS integration (Axel, ~5h)
 
 What:
 
-- Register `bridgesentinel.eth` (or a free `*.test` equivalent on Sepolia ENS).
-- Subnames as agent identities: `config.bridgesentinel.eth`, `anomaly.bridgesentinel.eth`, `risk.bridgesentinel.eth`.
-- Text records on each agent subname: `agent.role`, `agent.version`, `agent.axl_pubkey`, `agent.endpoint`.
+- Register `bridgesentinel.eth` on Sepolia ENS (free — just testnet gas). Use https://app.ens.domains on Sepolia or register programmatically via ETHRegistrarController (commit-reveal pattern).
+- Create subnames via `@ensdomains/ensjs` `createSubname()`: `config.bridgesentinel.eth`, `anomaly.bridgesentinel.eth`, `risk.bridgesentinel.eth`.
+- Set text records on each agent subname via `setRecords()` (batched multicall): `agent.role`, `agent.version`, `agent.axl_pubkey` (64-char hex ed25519 pubkey from AXL), `agent.endpoint`.
 - Per-protocol subname: `kelpdao.bridgesentinel.eth` with text records: `monitored.bridge`, `monitored.lending`, `pause.threshold`, `alert.channel`.
-- All agents at startup resolve their config from ENS — **zero hardcoded contract addresses or thresholds in code** (this is required by ENS's qualification rules).
+- All agents at startup resolve their config from ENS via viem's `getEnsText()` — **zero hardcoded contract addresses or thresholds in code** (this is required by ENS's qualification rules).
 - Dashboard shows the protocol's ENS card live (resolve `kelpdao.bridgesentinel.eth` and render its text records).
+- Setup script (`scripts/setup-ens.ts`) creates all subnames and sets all text records in one run.
+
+SDK dependencies: `viem` (reads — already installed), `@ensdomains/ensjs` (writes — add to setup script).
 
 Done when:
 
 - Updating `pause.threshold` in the ENS text record changes the threshold the next time the Risk Agent runs (verified by re-running the demo).
 - Updating `monitored.bridge` to a different contract address makes the Config Agent watch a different contract on next restart.
-- Each agent verifies the others' AXL message signatures against the pubkey it resolves from ENS, not from a config file.
+- Each agent verifies incoming AXL messages: `X-From-Peer-Id` must match the `agent.axl_pubkey` text record resolved from the sender's ENS subname.
 
 ### Step 8 — Dashboard (Axel, ~10h, can start in parallel from Step 1)
 
@@ -294,9 +316,11 @@ Done when:
 
 ## Risk & Shortcut Notes
 
-- If 0G Compute SDK is flaky on the day, fall back to a thin wrapper that hits 0G Compute first and Claude as a logged backup, but the demo path **must** show 0G Compute working at least once on stage.
-- If AXL setup blocks for >half a day, ship it as "AXL channel between Risk Agent and the others" and keep the Config↔Anomaly link as a simpler signed HTTP webhook — still meets the "peer-to-peer signed signals" narrative.
-- ENS L1 registration is slow and costs gas; use Sepolia ENS or an L2 ENS gateway from day 1, not mainnet.
+- If 0G Compute SDK is flaky on the day, fall back to a thin wrapper that hits 0G Compute first and Claude as a logged backup, but the demo path **must** show 0G Compute working at least once on stage. Note: testnet only has `qwen-2.5-7b-instruct` — if prompt quality is poor, consider mainnet `qwen3.6-plus` (requires real 0G tokens).
+- 0G wallet funding: need testnet 0G tokens. Check 0G faucet availability early. If faucet is down, this blocks Step 5 entirely.
+- AXL requires Go 1.25.x to build the node binary. If Go build fails or AXL nodes can't peer (e.g., firewall/NAT issues in the hackathon venue), fall back to direct HTTP POSTs between agents on localhost — same message format, just skip the AXL sidecar. This still demonstrates the architecture; mention AXL as "integrated in local dev, production-ready for multi-host deployment."
+- If AXL setup blocks for >half a day, keep Config→Risk and Anomaly→Risk as direct HTTP POSTs with a shared HMAC secret for auth — still meets the "peer-to-peer signed signals" narrative.
+- ENS: Sepolia ENS registration is free (testnet gas only). No L1/mainnet needed.
 - Don't build retry/private-routing for the pause tx — a wallet execution on Sepolia is enough for the MVP.
 - Skip iNFTs and 0G Storage for the MVP. Mention them in the README as "next steps" — judges like to see a clear roadmap.
 
