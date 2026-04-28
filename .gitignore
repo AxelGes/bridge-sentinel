@@ -15,6 +15,7 @@ cache/
 # foundry
 contracts/out/
 contracts/cache/
+contracts/deployments/*.json
 
 # misc
 .DS_Store
