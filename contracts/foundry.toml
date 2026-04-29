@@ -6,3 +6,6 @@ remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
 ]
 fs_permissions = [{ access = "read-write", path = "./deployments" }]
+
+[etherscan]
+"0g-testnet" = { key = "placeholder", chain = 16602, url = "https://chainscan-testnet.0g.ai/open/api" }
