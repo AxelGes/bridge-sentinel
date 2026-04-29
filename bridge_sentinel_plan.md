@@ -6,20 +6,20 @@ todos:
     content: Step 1 — Initial folder setup, one independent project per subdir (Axel)
     status: completed
   - id: contracts
-    content: Step 2 — Mock OFT bridge, fake rsETH, mock lending on Sepolia (BearPrince). Solidity done + Forge test passes locally. Missing: deploy to Sepolia + commit deployments/sepolia.json.
-    status: in_progress
+    content: Step 2 — Mock OFT bridge, fake rsETH, mock lending (BearPrince). Deployed to 0G testnet (chain 16602). Contracts verified on chainscan-testnet.0g.ai. 39 tests passing. Addresses in contracts/deployments/sepolia.json.
+    status: completed
   - id: config-agent
-    content: Step 3 — Config Agent reads bridge DVN and scores it (BearPrince)
-    status: pending
+    content: Step 3 — Config Agent reads bridge DVN and scores it (BearPrince). Polls getDVNConfig() every 15s, scores 1-of-1=2, 2-of-3=7 etc, sends ConfigSignal to Risk Agent via LocalTransport.
+    status: completed
   - id: anomaly-agent
-    content: Step 4 — Anomaly Agent detects deposit+borrow pattern (BearPrince)
-    status: pending
+    content: Step 4 — Anomaly Agent detects deposit+borrow pattern (BearPrince). Watches Deposit+Borrow events, detects same-wallet high-LTV pattern within time window, sends AnomalySignal.
+    status: completed
   - id: risk-agent-0g
-    content: Step 5 — Risk Agent runs on 0G Compute (BearPrince)
-    status: pending
+    content: Step 5 — Risk Agent runs on 0G Compute (BearPrince). HTTP server on :4000 with /signal /status /risk /signals /agents /health endpoints. 0G Compute via @0glabs/0g-serving-broker with fallback scoring. KelpDAO scenario produces 9.2/10.
+    status: completed
   - id: axl
-    content: Step 6 — Replace in-memory bus with signed Gensyn AXL pub/sub (BearPrince)
-    status: pending
+    content: Step 6 — AxlTransport implemented in agents/transport/src/axl.ts. Sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id against known pubkeys. Requires AXL Go sidecar binary + keypairs to activate.
+    status: completed
   - id: ens
     content: Step 7 — ENS subnames + text records for agent identity and protocol config, no hardcoded values (Axel)
     status: pending
@@ -157,19 +157,23 @@ Done when:
 - `cd agents/config && pnpm dev` (and same for `anomaly`, `risk`, `scripts/demo`) prints the hello-world line.
 - Repo is on GitHub, both teammates have it cloned and running.
 
-### Step 2 — Mock contracts on Sepolia (BearPrince, ~4h)
+### Step 2 — Mock contracts on 0G testnet (BearPrince) ✅
 
-What:
+Deployed to **0G testnet (chain 16602)** instead of Sepolia — same wallet has 0G tokens for Step 5.
 
-- `MockOFTBridge.sol` with a configurable DVN setup (`setDVN(uint8 required, address[] dvns)`) and a `mint(address to, uint256 amount)` function that simulates a bridge message landing.
-- `FakeRsETH.sol` (ERC-20) minted only by the bridge.
-- `MockLending.sol` with `deposit`, `borrow`, `pause`, `unpause`, owner-pausable, emits clean events with indexed user/asset.
-- Deploy script that writes addresses + ABIs to `contracts/deployments/sepolia.json`.
+Contracts (4 total, all verified on `chainscan-testnet.0g.ai`):
+- `FakeRsETH.sol` — ERC-20, open mint. `0x2b54FeC881C9230A2740Bef0E1d91E50Eb483ca1`
+- `MockWETH.sol` — ERC-20, open mint (borrow asset). `0x7740B82991d0c659A370EF82a4910E0e914C4253`
+- `MockOFTBridge.sol` — configurable DVN + mint. `0xD2efb57cFA2a7626d520C45a8304AD3162FE32Af`
+- `MockLending.sol` — deposit/borrow/pause, owner+guardian roles, 80% LTV. `0xD46bBD0362b1F8feb764366805F98f8782Ab81DA`
 
-Done when:
+Scripts:
+- `Deploy.s.sol` — deploys all 4, seeds 200k WETH liquidity, writes `contracts/deployments/sepolia.json`
+- `Simulate.s.sol` — KelpDAO replay: set 1-of-1 DVN → mint 116.5k rsETH → deposit → borrow 93.2k WETH
 
-- All three contracts are deployed on Sepolia, addresses committed in JSON.
-- A manual command from inside `contracts/` (e.g. `forge script script/Simulate.s.sol --broadcast`) can: set 1-of-1 DVN → mint 116k rsETH to attacker EOA → deposit into lending → borrow max WETH. All txs land successfully.
+Tests: 39 passing (5 suites). RPC: `https://evmrpc-testnet.0g.ai`
+
+Note for Steps 3-5: agents should use `https://evmrpc-testnet.0g.ai` as RPC, not Sepolia.
 
 ### Step 3 — Config Agent (BearPrince, ~3h)
 
