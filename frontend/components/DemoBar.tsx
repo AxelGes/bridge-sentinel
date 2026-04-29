@@ -11,22 +11,25 @@ interface DemoBarProps {
 
 export function DemoBar({ isRunning, isDone, onRun, onReset }: DemoBarProps) {
   return (
-    <div className="flex items-center justify-between rounded-md border border-amber-200 bg-amber-50 px-4 py-2.5">
-      <div className="flex items-center gap-3">
-        <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-amber-200 text-amber-800">
-          dev only
-        </span>
-        <span className="text-xs text-amber-800">
+    <div className="flex items-center justify-between rounded-lg border border-sky-100 bg-sky-50 px-5 py-3">
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">KelpDAO Replay</span>
+          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-sky-100 text-sky-500">
+            dev only
+          </span>
+        </div>
+        <span className="text-xs text-muted-foreground">
           {isRunning
             ? "Running — watching agents react..."
             : isDone
             ? "Replay complete. Risk Agent scored the attack."
-            : "KelpDAO replay — 1-of-1 DVN bridge, 116.5k rsETH mint, max-LTV borrow."}
+            : "Simulate the KelpDAO exploit: 1-of-1 DVN bridge, 116.5k rsETH mint, max-LTV borrow."}
         </span>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-4">
         {isDone && (
-          <Button variant="outline" size="sm" onClick={onReset} className="h-7 text-xs border-amber-300 text-amber-800 hover:bg-amber-100">
+          <Button variant="outline" size="sm" onClick={onReset}>
             Reset
           </Button>
         )}
@@ -34,11 +37,11 @@ export function DemoBar({ isRunning, isDone, onRun, onReset }: DemoBarProps) {
           size="sm"
           onClick={onRun}
           disabled={isRunning}
-          className="h-7 text-xs min-w-[130px] bg-amber-600 hover:bg-amber-700 text-white border-0"
+          className="min-w-[140px]"
         >
           {isRunning ? (
             <span className="flex items-center gap-2">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+              <span className="inline-block h-2 w-2 rounded-full bg-white animate-pulse" />
               Running…
             </span>
           ) : isDone ? (

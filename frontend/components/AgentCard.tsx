@@ -52,7 +52,7 @@ export function AgentCard({ agent }: AgentCardProps) {
             {roleLabel(agent.role)}
           </Badge>
           {agent.ensName && (
-            <span className="text-xs text-muted-foreground font-mono truncate max-w-[160px]">
+            <span className="text-xs text-muted-foreground font-mono">
               {agent.ensName}
             </span>
           )}
