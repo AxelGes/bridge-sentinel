@@ -6,8 +6,8 @@ todos:
     content: Step 1 — Initial folder setup, one independent project per subdir (Axel)
     status: completed
   - id: contracts
-    content: Step 2 — Mock OFT bridge, fake rsETH, mock lending on Sepolia (BearPrince)
-    status: pending
+    content: Step 2 — Mock OFT bridge, fake rsETH, mock lending on Sepolia (BearPrince). Solidity done + Forge test passes locally. Missing: deploy to Sepolia + commit deployments/sepolia.json.
+    status: in_progress
   - id: config-agent
     content: Step 3 — Config Agent reads bridge DVN and scores it (BearPrince)
     status: pending
@@ -24,8 +24,8 @@ todos:
     content: Step 7 — ENS subnames + text records for agent identity and protocol config, no hardcoded values (Axel)
     status: pending
   - id: dashboard
-    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button (Axel)
-    status: pending
+    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button (Axel). Completed with mock data. Needs real agent HTTP endpoints wired in once BearPrince delivers Steps 3-5. Pause button activates once NEXT_PUBLIC_LENDING_ADDRESS is set.
+    status: completed
   - id: demo-script
     content: Step 9 — One-command KelpDAO replay script wired to the dashboard (Axel + BearPrince)
     status: pending
