@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Web3Providers } from "@/lib/web3-providers";
+import { ClientProviders } from "@/app/client-providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -29,7 +29,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <Web3Providers>{children}</Web3Providers>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );
