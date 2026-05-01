@@ -20,3 +20,4 @@ contracts/deployments/*.json
 # misc
 .DS_Store
 *.log
+.vercel
