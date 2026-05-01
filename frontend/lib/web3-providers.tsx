@@ -10,7 +10,7 @@ const config = getDefaultConfig({
   appName: "Bridge Sentinel",
   projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "bridge-sentinel-dev",
   chains: [sepolia],
-  ssr: false,
+  ssr: true,
 });
 
 const queryClient = new QueryClient();
