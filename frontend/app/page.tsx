@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { AgentCard } from "@/components/AgentCard";
 import { DemoBar } from "@/components/DemoBar";
+import { ProtocolCard } from "@/components/ProtocolCard";
 import { RiskPanel } from "@/components/RiskPanel";
 import { SignalTimeline } from "@/components/SignalTimeline";
 import { TopBar } from "@/components/TopBar";
@@ -47,7 +48,10 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          <RiskPanel riskScore={riskScore} />
+          <div className="flex flex-col gap-6">
+            <RiskPanel riskScore={riskScore} />
+            <ProtocolCard />
+          </div>
         </div>
       </main>
     </div>

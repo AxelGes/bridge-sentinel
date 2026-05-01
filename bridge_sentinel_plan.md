@@ -18,20 +18,20 @@ todos:
     content: Step 5 — Risk Agent runs on 0G Compute (BearPrince). HTTP server on :4000 with /signal /status /risk /signals /agents /health endpoints. 0G Compute via @0glabs/0g-serving-broker with fallback scoring. KelpDAO scenario produces 9.2/10.
     status: completed
   - id: axl
-    content: Step 6 — AxlTransport implemented in agents/transport/src/axl.ts. Sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id against known pubkeys. Requires AXL Go sidecar binary + keypairs to activate.
-    status: completed
+    content: Step 6 — AxlTransport implemented in agents/transport/src/axl.ts. Sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id against known pubkeys. Code done; agents still use LocalTransport at runtime — AXL Go sidecar binary + keypairs needed to activate.
+    status: in_progress
   - id: ens
     content: Step 7 — ENS setup script (scripts/setup-ens/) creates subnames + text records. Agents resolve config from ENS at startup via resolveENSConfig(), falling back to env vars. Shared ENS resolver in agents/transport/src/ens.ts.
     status: completed
   - id: dashboard
-    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button. Now wired to Risk Agent HTTP API via useLiveDemo hook (polls GET /status every 2s). Falls back to mock demo when agents aren't running.
+    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button. Now wired to Risk Agent HTTP API via useLiveDemo hook (polls GET /status every 2s). Falls back to mock demo when agents aren't running. Deployed on Vercel. wagmi config includes 0G testnet (chain 16602) alongside Sepolia. Protocol config card shows monitoring targets from env vars (ENS live-read deferred).
     status: completed
   - id: demo-script
     content: Step 9 — KelpDAO replay script (scripts/demo/). Sets 1-of-1 DVN, mints 116.5k rsETH, deposits, borrows 93.2k WETH at 80% LTV. Re-runnable (auto-unpauses). Works with live agents.
     status: completed
   - id: submission
-    content: Step 10 — README, 3-min video, ETHGlobal submissions for AXL/0G/ENS, live deploy (both)
-    status: pending
+    content: Step 10 — README, 3-min video, ETHGlobal submissions for AXL/0G/ENS, live deploy (both). Root README written. Submissions and video still pending.
+    status: in_progress
 isProject: false
 ---
 
