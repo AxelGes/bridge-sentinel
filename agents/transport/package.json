@@ -4,5 +4,7 @@
   "private": true,
   "type": "module",
   "main": "src/index.ts",
-  "dependencies": {}
+  "dependencies": {
+    "viem": "^2.21.54"
+  }
 }

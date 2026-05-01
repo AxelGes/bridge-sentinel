@@ -3,19 +3,34 @@ import { createPublicClient, http, formatEther, type Address, type Log } from "v
 import { MockLendingABI } from "./abi.js";
 import { LocalTransport } from "../../transport/src/local.js";
 import type { AnomalySignal, SignalSeverity } from "../../transport/src/types.js";
+import { resolveENSConfig } from "../../transport/src/ens.js";
 
 const RPC_URL = process.env.RPC_URL || "https://evmrpc-testnet.0g.ai";
-const LENDING_ADDRESS = process.env.MOCK_LENDING_ADDRESS as Address;
+let LENDING_ADDRESS = process.env.MOCK_LENDING_ADDRESS as Address;
 const RISK_AGENT_URL = process.env.RISK_AGENT_URL || "http://localhost:4000/signal";
 const HTTP_PORT = Number(process.env.ANOMALY_AGENT_PORT) || 4002;
+const ENS_NAME = process.env.ENS_NAME || "bridgesentinel.eth";
 
 const DEPOSIT_SUPPLY_THRESHOLD = Number(process.env.DEPOSIT_SUPPLY_PCT) || 30;
 const LTV_THRESHOLD = Number(process.env.LTV_THRESHOLD_PCT) || 70;
 const WINDOW_MS = Number(process.env.WINDOW_MS) || 300_000;
 
-if (!LENDING_ADDRESS) {
-  console.error("[anomaly-agent] MOCK_LENDING_ADDRESS is required");
-  process.exit(1);
+async function resolveConfig() {
+  if (LENDING_ADDRESS) return;
+  console.log("[anomaly-agent] resolving config from ENS...");
+  try {
+    const ens = await resolveENSConfig(ENS_NAME, process.env.SEPOLIA_RPC_URL);
+    if (ens.lendingAddress) {
+      LENDING_ADDRESS = ens.lendingAddress as Address;
+      console.log(`[anomaly-agent] ENS → lending: ${LENDING_ADDRESS}`);
+    }
+  } catch (err) {
+    console.warn("[anomaly-agent] ENS resolution failed:", (err as Error).message);
+  }
+  if (!LENDING_ADDRESS) {
+    console.error("[anomaly-agent] MOCK_LENDING_ADDRESS is required (env or ENS)");
+    process.exit(1);
+  }
 }
 
 const client = createPublicClient({ transport: http(RPC_URL) });
@@ -109,6 +124,7 @@ async function handleBorrow(log: Log) {
 }
 
 async function main() {
+  await resolveConfig();
   console.log(`[anomaly-agent] watching lending ${LENDING_ADDRESS}`);
   console.log(`[anomaly-agent] thresholds: deposit>${DEPOSIT_SUPPLY_THRESHOLD}% supply, LTV>${LTV_THRESHOLD}%`);
 

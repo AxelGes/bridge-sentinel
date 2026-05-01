@@ -9,3 +9,4 @@ export type {
   AgentStatus,
   SignalSeverity,
 } from "./types.js";
+export { resolveENSConfig, type ENSConfig } from "./ens.js";

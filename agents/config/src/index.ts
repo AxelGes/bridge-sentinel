@@ -3,16 +3,32 @@ import { createPublicClient, http, type Address } from "viem";
 import { MockOFTBridgeABI } from "./abi.js";
 import { LocalTransport } from "../../transport/src/local.js";
 import type { ConfigSignal } from "../../transport/src/types.js";
+import { resolveENSConfig } from "../../transport/src/ens.js";
 
 const RPC_URL = process.env.RPC_URL || "https://evmrpc-testnet.0g.ai";
-const BRIDGE_ADDRESS = process.env.MOCK_BRIDGE_ADDRESS as Address;
 const RISK_AGENT_URL = process.env.RISK_AGENT_URL || "http://localhost:4000/signal";
 const POLL_INTERVAL = Number(process.env.POLL_INTERVAL_MS) || 15_000;
 const HTTP_PORT = Number(process.env.CONFIG_AGENT_PORT) || 4001;
+const ENS_NAME = process.env.ENS_NAME || "bridgesentinel.eth";
 
-if (!BRIDGE_ADDRESS) {
-  console.error("[config-agent] MOCK_BRIDGE_ADDRESS is required");
-  process.exit(1);
+let BRIDGE_ADDRESS = process.env.MOCK_BRIDGE_ADDRESS as Address;
+
+async function resolveConfig() {
+  if (BRIDGE_ADDRESS) return;
+  console.log("[config-agent] resolving config from ENS...");
+  try {
+    const ens = await resolveENSConfig(ENS_NAME, process.env.SEPOLIA_RPC_URL);
+    if (ens.bridgeAddress) {
+      BRIDGE_ADDRESS = ens.bridgeAddress as Address;
+      console.log(`[config-agent] ENS → bridge: ${BRIDGE_ADDRESS}`);
+    }
+  } catch (err) {
+    console.warn("[config-agent] ENS resolution failed:", (err as Error).message);
+  }
+  if (!BRIDGE_ADDRESS) {
+    console.error("[config-agent] MOCK_BRIDGE_ADDRESS is required (env or ENS)");
+    process.exit(1);
+  }
 }
 
 const client = createPublicClient({ transport: http(RPC_URL) });
@@ -74,6 +90,7 @@ async function poll() {
 }
 
 async function main() {
+  await resolveConfig();
   console.log(`[config-agent] watching bridge ${BRIDGE_ADDRESS}`);
   console.log(`[config-agent] polling every ${POLL_INTERVAL}ms, sending to ${RISK_AGENT_URL}`);
 

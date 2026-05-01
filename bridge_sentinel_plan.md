@@ -21,14 +21,14 @@ todos:
     content: Step 6 — AxlTransport implemented in agents/transport/src/axl.ts. Sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id against known pubkeys. Requires AXL Go sidecar binary + keypairs to activate.
     status: completed
   - id: ens
-    content: Step 7 — ENS subnames + text records for agent identity and protocol config, no hardcoded values (Axel)
-    status: pending
+    content: Step 7 — ENS setup script (scripts/setup-ens/) creates subnames + text records. Agents resolve config from ENS at startup via resolveENSConfig(), falling back to env vars. Shared ENS resolver in agents/transport/src/ens.ts.
+    status: completed
   - id: dashboard
-    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button (Axel). Completed with mock data. Needs real agent HTTP endpoints wired in once BearPrince delivers Steps 3-5. Pause button activates once NEXT_PUBLIC_LENDING_ADDRESS is set.
+    content: Step 8 — Next.js dashboard with live signals, risk timeline, and Pause button. Now wired to Risk Agent HTTP API via useLiveDemo hook (polls GET /status every 2s). Falls back to mock demo when agents aren't running.
     status: completed
   - id: demo-script
-    content: Step 9 — One-command KelpDAO replay script wired to the dashboard (Axel + BearPrince)
-    status: pending
+    content: Step 9 — KelpDAO replay script (scripts/demo/). Sets 1-of-1 DVN, mints 116.5k rsETH, deposits, borrows 93.2k WETH at 80% LTV. Re-runnable (auto-unpauses). Works with live agents.
+    status: completed
   - id: submission
     content: Step 10 — README, 3-min video, ETHGlobal submissions for AXL/0G/ENS, live deploy (both)
     status: pending

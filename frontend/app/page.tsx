@@ -8,10 +8,10 @@ import { SignalTimeline } from "@/components/SignalTimeline";
 import { TopBar } from "@/components/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { useDemo } from "@/lib/use-demo";
+import { useLiveDemo } from "@/lib/use-live-demo";
 
 export default function Home() {
-  const { signals, riskScore, agentStatuses, isRunning, isDone, runDemo, reset } = useDemo();
+  const { signals, riskScore, agentStatuses, isRunning, isDone, runDemo, reset } = useLiveDemo();
   const [paused, setPaused] = useState(false);
 
   return (
