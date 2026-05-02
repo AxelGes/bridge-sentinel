@@ -11,15 +11,15 @@ interface DemoBarProps {
 
 export function DemoBar({ isRunning, isDone, onRun, onReset }: DemoBarProps) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-sky-100 bg-sky-50 px-5 py-3">
+    <div className="flex items-center justify-between rounded-lg border border-primary/15 bg-primary/5 px-5 py-3 animate-fade-in dark:border-primary/20 dark:bg-primary/10">
       <div className="flex flex-col gap-0.5">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">KelpDAO Replay</span>
-          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-sky-100 text-sky-500">
-            dev only
+          <span className="text-sm font-semibold font-[family-name:var(--font-display)]">KelpDAO Replay</span>
+          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest bg-primary/10 text-primary dark:bg-primary/20">
+            dev
           </span>
         </div>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-xs text-muted-foreground" aria-live="polite">
           {isRunning
             ? "Running — watching agents react..."
             : isDone
@@ -41,7 +41,7 @@ export function DemoBar({ isRunning, isDone, onRun, onReset }: DemoBarProps) {
         >
           {isRunning ? (
             <span className="flex items-center gap-2">
-              <span className="inline-block h-2 w-2 rounded-full bg-white animate-pulse" />
+              <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-primary-foreground animate-pulse" />
               Running…
             </span>
           ) : isDone ? (

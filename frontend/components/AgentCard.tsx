@@ -37,11 +37,12 @@ export function AgentCard({ agent }: AgentCardProps) {
     <Card className="flex flex-col gap-0">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-sm font-semibold">{agent.name}</CardTitle>
+          <CardTitle className="text-sm font-semibold font-[family-name:var(--font-display)]">{agent.name}</CardTitle>
           <div className="flex items-center gap-1.5 shrink-0">
             <span
+              aria-hidden="true"
               className={`inline-block h-2 w-2 rounded-full ${
-                isOnline ? "bg-green-500" : "bg-zinc-300"
+                isOnline ? "bg-emerald-500 dark:bg-emerald-400" : "bg-slate-300 dark:bg-slate-600"
               }`}
             />
             <span className="text-xs text-muted-foreground capitalize">{agent.status}</span>
@@ -52,7 +53,7 @@ export function AgentCard({ agent }: AgentCardProps) {
             {roleLabel(agent.role)}
           </Badge>
           {agent.ensName && (
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-xs text-muted-foreground font-mono" translate="no">
               {agent.ensName}
             </span>
           )}

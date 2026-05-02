@@ -7,7 +7,6 @@ import { ProtocolCard } from "@/components/ProtocolCard";
 import { RiskPanel } from "@/components/RiskPanel";
 import { SignalTimeline } from "@/components/SignalTimeline";
 import { TopBar } from "@/components/TopBar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { useLiveDemo } from "@/lib/use-live-demo";
 
@@ -16,42 +15,48 @@ export default function Home() {
   const [paused, setPaused] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50">
+    <div className="min-h-screen flex flex-col bg-background">
       <TopBar
         riskScore={riskScore?.score ?? null}
         paused={paused}
         onPausedChange={setPaused}
       />
 
-      <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-6 flex flex-col gap-6">
+      <main className="flex-1 mx-auto w-full max-w-7xl px-6 py-8 flex flex-col gap-8" aria-label="Bridge monitoring dashboard">
+        <h1 className="sr-only">Bridge Sentinel — KelpDAO Monitoring Dashboard</h1>
+
         <DemoBar isRunning={isRunning} isDone={isDone} onRun={runDemo} onReset={reset} />
 
-        {/* Agent status row */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {agentStatuses.map((agent) => (
-            <AgentCard key={agent.role} agent={agent} />
+        <section aria-label="Agent statuses" className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {agentStatuses.map((agent, i) => (
+            <div key={agent.role} className="animate-slide-up" style={{ animationDelay: `${i * 80}ms` }}>
+              <AgentCard agent={agent} />
+            </div>
           ))}
-        </div>
+        </section>
 
-        {/* Main content: timeline + risk panel */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-          <Card className="flex flex-col">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold">Signals Timeline</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                Live feed of Config and Anomaly agent signals
-              </p>
-            </CardHeader>
-            <Separator />
-            <CardContent className="pt-4 flex-1">
-              <SignalTimeline signals={signals} />
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_380px]">
+          <section aria-label="Signals timeline" className="animate-fade-in flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-semibold font-[family-name:var(--font-display)]">Signals Timeline</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Live feed from Config and Anomaly agents
+                </p>
+              </div>
+            </div>
+            <Separator className="mb-4" />
+            <SignalTimeline signals={signals} />
+          </section>
 
-          <div className="flex flex-col gap-6">
-            <RiskPanel riskScore={riskScore} />
-            <ProtocolCard />
-          </div>
+          <aside className="flex flex-col gap-6" aria-label="Risk assessment">
+            <div className="animate-slide-up" style={{ animationDelay: "120ms" }}>
+              <RiskPanel riskScore={riskScore} />
+            </div>
+            <div className="animate-slide-up" style={{ animationDelay: "200ms" }}>
+              <ProtocolCard />
+            </div>
+          </aside>
         </div>
       </main>
     </div>

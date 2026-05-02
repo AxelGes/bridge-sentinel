@@ -5,6 +5,7 @@ import { useWriteContract, useAccount } from "wagmi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { riskBadgeClasses, riskLabel } from "@/lib/risk-colors";
 
 const MOCK_LENDING_ABI = [
   {
@@ -16,7 +17,6 @@ const MOCK_LENDING_ABI = [
   },
 ] as const;
 
-// Populated once BearPrince deploys and commits sepolia.json
 const LENDING_ADDRESS =
   (process.env.NEXT_PUBLIC_LENDING_ADDRESS as `0x${string}`) ?? undefined;
 
@@ -24,20 +24,6 @@ interface TopBarProps {
   riskScore: number | null;
   paused: boolean;
   onPausedChange?: (paused: boolean) => void;
-}
-
-function riskColor(score: number | null): string {
-  if (score === null) return "bg-zinc-100 text-zinc-600 border-zinc-200";
-  if (score >= 8) return "bg-red-100 text-red-700 border-red-200";
-  if (score >= 5) return "bg-yellow-100 text-yellow-700 border-yellow-200";
-  return "bg-green-100 text-green-700 border-green-200";
-}
-
-function riskLabel(score: number | null): string {
-  if (score === null) return "—";
-  if (score >= 8) return "CRITICAL";
-  if (score >= 5) return "ELEVATED";
-  return "LOW";
 }
 
 export function TopBar({ riskScore, paused, onPausedChange }: TopBarProps) {
@@ -66,23 +52,26 @@ export function TopBar({ riskScore, paused, onPausedChange }: TopBarProps) {
   }
 
   return (
-    <header className='sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur'>
-      <div className='mx-auto flex h-14 max-w-7xl items-center gap-4 px-6'>
-        <div className='flex items-center gap-2 shrink-0'>
-          <span className='text-base font-semibold tracking-tight'>
+    <header
+      className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur"
+      aria-label="Bridge Sentinel navigation"
+    >
+      <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-6">
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-base font-semibold tracking-tight font-[family-name:var(--font-display)]">
             Bridge Sentinel
           </span>
-          <Separator orientation='vertical' className='h-4' />
-          <span className='text-sm text-muted-foreground'>KelpDAO</span>
+          <Separator orientation="vertical" className="h-4" />
+          <span className="text-sm text-muted-foreground hidden sm:inline">KelpDAO</span>
         </div>
 
-        <div className='flex flex-1 items-center justify-center gap-2'>
+        <div className="flex flex-1 items-center justify-center gap-2">
           {riskScore !== null && (
-            <span className='text-sm text-muted-foreground'>Risk Score</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">Risk</span>
           )}
           <Badge
-            variant='outline'
-            className={`text-xs font-semibold tabular-nums ${riskColor(riskScore)}`}
+            variant="outline"
+            className={`text-xs font-semibold tabular-nums ${riskBadgeClasses(riskScore)}`}
           >
             {riskScore !== null
               ? `${riskScore.toFixed(1)} / 10`
@@ -90,39 +79,37 @@ export function TopBar({ riskScore, paused, onPausedChange }: TopBarProps) {
           </Badge>
           {riskScore !== null && (
             <Badge
-              variant='outline'
-              className={`text-xs ${riskColor(riskScore)}`}
+              variant="outline"
+              className={`text-xs ${riskBadgeClasses(riskScore)} hidden sm:inline-flex`}
             >
               {riskLabel(riskScore)}
             </Badge>
           )}
         </div>
 
-        <div className='flex items-center gap-3 shrink-0 ml-auto'>
-          <ConnectButton
-            chainStatus='icon'
-            accountStatus='avatar'
-            showBalance={false}
-          />
-          <button
+        <div className="flex items-center gap-3 shrink-0 ml-auto">
+          <div className="hidden sm:block">
+            <ConnectButton
+              chainStatus="icon"
+              accountStatus="avatar"
+              showBalance={false}
+            />
+          </div>
+          <Button
+            variant={paused ? "secondary" : isPauseActive ? "destructive" : "outline"}
+            size="sm"
             disabled={!isPauseActive || isPending}
             onClick={handlePause}
-            className={`
-              inline-flex items-center gap-2 rounded-md border px-4 py-1.5 text-sm font-semibold
-              transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              disabled:pointer-events-none disabled:opacity-40
-              ${
-                paused
-                  ? "border-zinc-300 bg-zinc-100 text-zinc-500 cursor-default"
-                  : isPauseActive
-                    ? "border-red-600 bg-red-600 text-white shadow-md shadow-red-200 hover:bg-red-700 hover:border-red-700 active:scale-95"
-                    : "border-zinc-200 bg-white text-zinc-400"
-              }
-            `}
+            className={isPauseActive ? "shadow-md shadow-destructive/20" : ""}
           >
             {!paused && (
               <span
-                className={`h-2 w-2 rounded-full shrink-0 ${isPauseActive ? "bg-white animate-pulse" : "bg-zinc-300"}`}
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full shrink-0 ${
+                  isPauseActive
+                    ? "bg-destructive-foreground animate-pulse"
+                    : "bg-muted-foreground/30"
+                }`}
               />
             )}
             {isPending
@@ -130,7 +117,7 @@ export function TopBar({ riskScore, paused, onPausedChange }: TopBarProps) {
               : paused
                 ? "Protocol Paused"
                 : "Pause Protocol"}
-          </button>
+          </Button>
         </div>
       </div>
     </header>
