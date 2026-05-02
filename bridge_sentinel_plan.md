@@ -15,11 +15,11 @@ todos:
     content: Step 4 — Anomaly Agent detects deposit+borrow pattern (BearPrince). Watches Deposit+Borrow events, detects same-wallet high-LTV pattern within time window, sends AnomalySignal.
     status: completed
   - id: risk-agent-0g
-    content: Step 5 — Risk Agent runs on 0G Compute (BearPrince). HTTP server on :4000 with /signal /status /risk /signals /agents /health endpoints. 0G Compute via @0glabs/0g-serving-broker with fallback scoring. KelpDAO scenario produces 9.2/10.
+    content: "Step 5 — Risk Agent fully operational. Migrated from deprecated @0glabs/0g-serving-broker to @0gfoundation/0g-compute-ts-sdk v0.8.0. Provider 0xa48f01287233509FD694a22Bf840225062E67836 (qwen/qwen-2.5-7b-instruct) funded and live on 0G testnet. Real LLM inference confirmed: TEE attestation verified via ZG-Res-Key, score 9+/10 on KelpDAO scenario, model label shows 'via 0G Compute'. scripts/setup-0g/ added for provider discovery and account funding."
     status: completed
   - id: axl
-    content: "Step 6 — AxlTransport class coded in agents/transport/src/axl.ts (send, recv, pubkey validation). NOT WIRED IN: all 3 agents hardcode LocalTransport. Remaining: (1) add USE_AXL env toggle in each agent to choose transport, (2) create axl/ dir with node-config.json templates, (3) generate 3 ed25519 keypairs, (4) build AXL Go binary, (5) test end-to-end with 3 sidecars. If AXL binary/Go setup blocks, keep LocalTransport and mention AXL as 'integrated, production-ready' in submission."
-    status: in_progress
+    content: "Step 6 — AXL fully operational. Binary built (Go 1.25.5), 3 ed25519 keypairs generated, 3 sidecars configured (ports 9002/9012/9022). AxlTransport sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id via 24-char prefix match (Yggdrasil address transform). All 3 agents tested end-to-end with USE_AXL=true — Config→Risk signal flow confirmed via AXL P2P."
+    status: completed
   - id: ens
     content: Step 7 — ENS setup script (scripts/setup-ens/) creates subnames + text records. Agents resolve config from ENS at startup via resolveENSConfig(), falling back to env vars. Shared ENS resolver in agents/transport/src/ens.ts.
     status: completed
