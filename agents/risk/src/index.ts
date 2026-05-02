@@ -2,8 +2,12 @@ import "dotenv/config";
 import http from "node:http";
 import { Wallet, JsonRpcProvider } from "ethers";
 import type { Signal, ConfigSignal, AnomalySignal, RiskScore, AgentStatus } from "../../transport/src/types.js";
+import { resolveENSConfig } from "../../transport/src/ens.js";
+import { createTransport } from "../../transport/src/factory.js";
 
 const HTTP_PORT = Number(process.env.RISK_AGENT_PORT) || 4000;
+const USE_AXL = process.env.USE_AXL === "true";
+const ENS_NAME = process.env.ENS_NAME || "bridgesentinel.eth";
 const ZG_PRIVATE_KEY = process.env.ZG_PRIVATE_KEY || process.env.DEPLOYER_PRIVATE_KEY;
 const ZG_RPC_URL = process.env.ZG_RPC_URL || "https://evmrpc-testnet.0g.ai";
 const ZG_PROVIDER_ADDRESS = process.env.ZG_PROVIDER_ADDRESS || "";
@@ -150,6 +154,24 @@ const agentStatuses = (): AgentStatus[] => [
 ];
 
 async function main() {
+  // In AXL mode, start the AXL transport receiver for incoming signals
+  if (USE_AXL) {
+    let ensConfig;
+    try {
+      ensConfig = await resolveENSConfig(ENS_NAME, process.env.SEPOLIA_RPC_URL);
+    } catch (err) {
+      console.warn("[risk-agent] ENS resolution failed:", (err as Error).message);
+    }
+    const { transport } = createTransport({ useAxl: true, ensConfig });
+    transport.onReceive((signal, fromPeerId) => {
+      console.log(`[risk-agent] AXL signal from peer: ${fromPeerId ?? "unknown"}`);
+      handleSignal(signal);
+    });
+    await transport.startReceiver(0);
+    console.log(`[risk-agent] AXL transport receiver started`);
+  }
+
+  // HTTP API server — always runs for dashboard + fallback signal ingestion
   const server = http.createServer((req, res) => {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
@@ -211,7 +233,7 @@ async function main() {
 
   server.listen(HTTP_PORT, () => {
     console.log(`[risk-agent] HTTP server on :${HTTP_PORT}`);
-    console.log(`[risk-agent] endpoints: POST /signal, GET /status /risk /signals /agents /health`);
+    console.log(`[risk-agent] transport: ${USE_AXL ? "AXL (signals via AXL, API via HTTP)" : "local (signals + API via HTTP)"}`);
     console.log(`[risk-agent] 0G Compute: ${ZG_PROVIDER_ADDRESS ? "configured" : "fallback mode (set ZG_PROVIDER_ADDRESS)"}`);
   });
 }

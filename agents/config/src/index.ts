@@ -1,25 +1,26 @@
 import "dotenv/config";
 import { createPublicClient, http, type Address } from "viem";
 import { MockOFTBridgeABI } from "./abi.js";
-import { LocalTransport } from "../../transport/src/local.js";
 import type { ConfigSignal } from "../../transport/src/types.js";
-import { resolveENSConfig } from "../../transport/src/ens.js";
+import type { Transport } from "../../transport/src/transport.js";
+import { resolveENSConfig, type ENSConfig } from "../../transport/src/ens.js";
+import { createTransport } from "../../transport/src/factory.js";
 
 const RPC_URL = process.env.RPC_URL || "https://evmrpc-testnet.0g.ai";
-const RISK_AGENT_URL = process.env.RISK_AGENT_URL || "http://localhost:4000/signal";
 const POLL_INTERVAL = Number(process.env.POLL_INTERVAL_MS) || 15_000;
 const HTTP_PORT = Number(process.env.CONFIG_AGENT_PORT) || 4001;
 const ENS_NAME = process.env.ENS_NAME || "bridgesentinel.eth";
+const USE_AXL = process.env.USE_AXL === "true";
 
 let BRIDGE_ADDRESS = process.env.MOCK_BRIDGE_ADDRESS as Address;
 
 async function resolveConfig() {
-  if (BRIDGE_ADDRESS) return;
+  let ensConfig: ENSConfig | undefined;
   console.log("[config-agent] resolving config from ENS...");
   try {
-    const ens = await resolveENSConfig(ENS_NAME, process.env.SEPOLIA_RPC_URL);
-    if (ens.bridgeAddress) {
-      BRIDGE_ADDRESS = ens.bridgeAddress as Address;
+    ensConfig = await resolveENSConfig(ENS_NAME, process.env.SEPOLIA_RPC_URL);
+    if (!BRIDGE_ADDRESS && ensConfig.bridgeAddress) {
+      BRIDGE_ADDRESS = ensConfig.bridgeAddress as Address;
       console.log(`[config-agent] ENS → bridge: ${BRIDGE_ADDRESS}`);
     }
   } catch (err) {
@@ -29,10 +30,17 @@ async function resolveConfig() {
     console.error("[config-agent] MOCK_BRIDGE_ADDRESS is required (env or ENS)");
     process.exit(1);
   }
+
+  const result = createTransport({ useAxl: USE_AXL, ensConfig });
+  transport = result.transport;
+  sendTarget = result.sendTarget;
+  console.log(`[config-agent] transport: ${USE_AXL ? "AXL" : "local"}, target: ${sendTarget}`);
 }
 
 const client = createPublicClient({ transport: http(RPC_URL) });
-const transport = new LocalTransport();
+
+let transport: Transport;
+let sendTarget: string;
 
 function scoreDVN(required: number, dvnCount: number): number {
   if (dvnCount === 0) return 1;
@@ -78,7 +86,7 @@ async function poll() {
       console.log(`[config-agent] DVN score: ${score}/10 (${requiredNum}-of-${dvnCount})`);
 
       try {
-        await transport.send(RISK_AGENT_URL, signal);
+        await transport.send(sendTarget, signal);
         console.log("[config-agent] signal sent to risk agent");
       } catch (err) {
         console.warn("[config-agent] failed to send signal:", (err as Error).message);
@@ -92,7 +100,7 @@ async function poll() {
 async function main() {
   await resolveConfig();
   console.log(`[config-agent] watching bridge ${BRIDGE_ADDRESS}`);
-  console.log(`[config-agent] polling every ${POLL_INTERVAL}ms, sending to ${RISK_AGENT_URL}`);
+  console.log(`[config-agent] polling every ${POLL_INTERVAL}ms, sending to ${sendTarget}`);
 
   await transport.startReceiver(HTTP_PORT);
   console.log(`[config-agent] HTTP server on :${HTTP_PORT}`);

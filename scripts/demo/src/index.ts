@@ -44,10 +44,22 @@ function log(msg: string) {
   console.log(`[demo +${elapsed}s] ${msg}`);
 }
 
+async function waitForReceipt(hash: Hex, maxAttempts = 60) {
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      const receipt = await publicClient.getTransactionReceipt({ hash });
+      return receipt;
+    } catch {
+      await new Promise((r) => setTimeout(r, 5_000));
+    }
+  }
+  throw new Error(`tx not mined after ${maxAttempts * 5}s: ${hash}`);
+}
+
 async function send(address: Address, abi: any, functionName: string, args: any[] = []) {
   const hash = await walletClient.writeContract({ address, abi, functionName, args } as any);
   log(`  tx: ${hash}`);
-  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  const receipt = await waitForReceipt(hash);
   if (receipt.status !== "success") throw new Error(`tx reverted: ${hash}`);
   return receipt;
 }

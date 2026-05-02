@@ -43,7 +43,7 @@ export class AxlTransport implements Transport {
     this.handlers.push(handler);
   }
 
-  async startReceiver(): Promise<void> {
+  async startReceiver(_port?: number): Promise<void> {
     this.pollInterval = setInterval(() => this.poll(), 500);
   }
 

@@ -1,0 +1,8 @@
+{
+  "PrivateKeyPath": "./private-config.pem",
+  "Listen": ["tls://0.0.0.0:9001"],
+  "Peers": [
+    "tls://127.0.0.1:9011",
+    "tls://127.0.0.1:9021"
+  ]
+}
