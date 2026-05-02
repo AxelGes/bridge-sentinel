@@ -1,12 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  MOCK_AGENT_STATUSES,
-  MOCK_ANOMALY_SIGNAL,
-  MOCK_CONFIG_SIGNAL,
-  MOCK_RISK_SCORE,
-} from "./mock-data";
 import type { AgentStatus, RiskScore, Signal } from "./types";
 
 const RISK_AGENT_URL =
@@ -22,15 +16,17 @@ interface DemoState {
   isLive: boolean;
 }
 
+const EMPTY_AGENTS: AgentStatus[] = [
+  { name: "Config Agent", role: "config", status: "idle", ensName: "config.bridgesentinel.eth" },
+  { name: "Anomaly Agent", role: "anomaly", status: "idle", ensName: "anomaly.bridgesentinel.eth" },
+  { name: "Risk Agent", role: "risk", status: "idle", ensName: "risk.bridgesentinel.eth" },
+];
+
 export function useLiveDemo() {
   const [state, setState] = useState<DemoState>({
     signals: [],
     riskScore: null,
-    agentStatuses: MOCK_AGENT_STATUSES.map((a) => ({
-      ...a,
-      status: "idle",
-      lastSignal: undefined,
-    })),
+    agentStatuses: EMPTY_AGENTS,
     isRunning: false,
     isDone: false,
     isLive: false,
@@ -57,8 +53,7 @@ export function useLiveDemo() {
           agentStatuses: data.agents ?? s.agentStatuses,
           isLive: true,
           isDone: hasRisk && hasSignals ? true : s.isDone,
-          isRunning:
-            hasSignals && !hasRisk ? true : hasRisk ? false : s.isRunning,
+          isRunning: hasSignals && !hasRisk ? true : hasRisk ? false : s.isRunning,
         };
       });
       return true;
@@ -82,93 +77,42 @@ export function useLiveDemo() {
     }
   }, []);
 
-  // Try connecting on mount
+  // Always poll on mount — no mock fallback
   useEffect(() => {
-    pollRiskAgent().then((live) => {
-      if (live) startPolling();
-    });
+    startPolling();
     return stopPolling;
-  }, [pollRiskAgent, startPolling, stopPolling]);
+  }, [startPolling, stopPolling]);
 
+  // Run button resets the UI and keeps polling live data
   const runDemo = useCallback(() => {
     if (state.isRunning) return;
-
-    // Reset state
     setState((s) => ({
       ...s,
       signals: [],
       riskScore: null,
-      agentStatuses: (s.isLive ? s.agentStatuses : MOCK_AGENT_STATUSES).map(
-        (a) => ({ ...a, status: "online" as const, lastSignal: undefined }),
-      ),
+      agentStatuses: s.agentStatuses.map((a) => ({
+        ...a,
+        status: "online" as const,
+        lastSignal: undefined,
+      })),
       isRunning: true,
       isDone: false,
     }));
-
-    // Try to trigger live demo script via Risk Agent
-    if (state.isLive) {
-      startPolling();
-      return;
-    }
-
-    // Fall back to mock demo
-    const now = Date.now();
-    const configSignal = { ...MOCK_CONFIG_SIGNAL, timestamp: now };
-    const anomalySignal = { ...MOCK_ANOMALY_SIGNAL, timestamp: now + 2000 };
-    const riskScore = { ...MOCK_RISK_SCORE, timestamp: now + 4500 };
-
-    setTimeout(() => {
-      setState((s) => ({
-        ...s,
-        signals: [...s.signals, configSignal],
-        agentStatuses: s.agentStatuses.map((a) =>
-          a.role === "config" ? { ...a, lastSignal: configSignal } : a,
-        ),
-      }));
-    }, 500);
-
-    setTimeout(() => {
-      setState((s) => ({
-        ...s,
-        signals: [...s.signals, anomalySignal],
-        agentStatuses: s.agentStatuses.map((a) =>
-          a.role === "anomaly" ? { ...a, lastSignal: anomalySignal } : a,
-        ),
-      }));
-    }, 2500);
-
-    setTimeout(() => {
-      setState((s) => ({
-        ...s,
-        riskScore,
-        isRunning: false,
-        isDone: true,
-      }));
-    }, 5000);
-  }, [state.isRunning, state.isLive, startPolling]);
+    startPolling();
+  }, [state.isRunning, startPolling]);
 
   const reset = useCallback(() => {
     stopPolling();
     setState({
       signals: [],
       riskScore: null,
-      agentStatuses: MOCK_AGENT_STATUSES.map((a) => ({
-        ...a,
-        status: "idle",
-        lastSignal: undefined,
-      })),
+      agentStatuses: EMPTY_AGENTS,
       isRunning: false,
       isDone: false,
       isLive: false,
     });
-    // Re-check if agents are live
-    pollRiskAgent().then((live) => {
-      if (live) {
-        setState((s) => ({ ...s, isLive: true }));
-        startPolling();
-      }
-    });
-  }, [pollRiskAgent, startPolling, stopPolling]);
+    startPolling();
+  }, [startPolling, stopPolling]);
 
   return { ...state, runDemo, reset };
 }
