@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-AXL_PORTS="9001 9002 9011 9012 9021 9022 7001 7002 7003"
+AXL_PORTS="9001 9002 9011 9012 9021 9022"
 
 # ── Kill anything on our ports ───────────────────────────────────────
 echo "Clearing ports..."
