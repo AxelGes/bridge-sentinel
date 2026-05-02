@@ -20,7 +20,9 @@ const LENDING = process.env.MOCK_LENDING_ADDRESS as Address;
 const RSETH = process.env.FAKE_RSETH_ADDRESS as Address;
 
 if (!PRIVATE_KEY || !BRIDGE || !LENDING || !RSETH) {
-  console.error("[demo] Missing env vars: DEPLOYER_PRIVATE_KEY, MOCK_BRIDGE_ADDRESS, MOCK_LENDING_ADDRESS, FAKE_RSETH_ADDRESS");
+  console.error(
+    "[demo] Missing env vars: DEPLOYER_PRIVATE_KEY, MOCK_BRIDGE_ADDRESS, MOCK_LENDING_ADDRESS, FAKE_RSETH_ADDRESS",
+  );
   process.exit(1);
 }
 
@@ -36,7 +38,11 @@ const chain = {
 
 const account = privateKeyToAccount(PRIVATE_KEY);
 const publicClient = createPublicClient({ chain, transport: http(RPC_URL) });
-const walletClient = createWalletClient({ account, chain, transport: http(RPC_URL) });
+const walletClient = createWalletClient({
+  account,
+  chain,
+  transport: http(RPC_URL),
+});
 
 const t0 = Date.now();
 function log(msg: string) {
@@ -56,8 +62,18 @@ async function waitForReceipt(hash: Hex, maxAttempts = 60) {
   throw new Error(`tx not mined after ${maxAttempts * 5}s: ${hash}`);
 }
 
-async function send(address: Address, abi: any, functionName: string, args: any[] = []) {
-  const hash = await walletClient.writeContract({ address, abi, functionName, args } as any);
+async function send(
+  address: Address,
+  abi: any,
+  functionName: string,
+  args: any[] = [],
+) {
+  const hash = await walletClient.writeContract({
+    address,
+    abi,
+    functionName,
+    args,
+  } as any);
   log(`  tx: ${hash}`);
   const receipt = await waitForReceipt(hash);
   if (receipt.status !== "success") throw new Error(`tx reverted: ${hash}`);
@@ -86,13 +102,17 @@ async function main() {
 
   // Step 1: Set 1-of-1 DVN (weak bridge config)
   log("Step 1: Setting 1-of-1 DVN on bridge (weak config)...");
-  const maliciousDvn = ("0x" + keccak256(toHex("malicious-dvn")).slice(26)) as Address;
+  const maliciousDvn = ("0x" +
+    keccak256(toHex("malicious-dvn")).slice(26)) as Address;
   await send(BRIDGE, MockOFTBridgeABI, "setDVN", [1, [maliciousDvn]]);
   log("  ✓ Bridge DVN set to 1-of-1 → Config Agent should flag HIGH RISK");
 
   // Step 2: Mint 116,500 rsETH via bridge
   log("Step 2: Minting 116,500 rsETH via bridge...");
-  await send(BRIDGE, MockOFTBridgeABI, "mint", [account.address, DEPOSIT_AMOUNT]);
+  await send(BRIDGE, MockOFTBridgeABI, "mint", [
+    account.address,
+    DEPOSIT_AMOUNT,
+  ]);
   const balance = await publicClient.readContract({
     address: RSETH,
     abi: ERC20ABI,
@@ -112,9 +132,17 @@ async function main() {
   await send(LENDING, MockLendingABI, "borrow", [BORROW_AMOUNT]);
   log("  ✓ Borrowed 93,200 WETH → Anomaly Agent should trigger CRITICAL alert");
 
+  // Step 5: Wait for agents to detect, then pause the protocol
+  log("Step 5: Waiting 10s for agents to score the risk...");
+  await new Promise((r) => setTimeout(r, 10_000));
+
+  log("Step 5: Pausing lending protocol (sentinel response)...");
+  await send(LENDING, MockLendingABI, "pause");
+  log("  ✓ Lending protocol PAUSED — exploit contained");
+
   console.log("─".repeat(60));
   log("EXPLOIT REPLAY COMPLETE");
-  log("Agents should now detect and score this within seconds.");
+  log("Agents detected the attack and the protocol has been paused.");
   log("Check Risk Agent: curl http://localhost:4000/status");
   log(`Total time: ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
