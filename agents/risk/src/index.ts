@@ -1,6 +1,8 @@
 import "dotenv/config";
 import http from "node:http";
 import { Wallet, JsonRpcProvider } from "ethers";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { createZGComputeNetworkBroker } = require("@0gfoundation/0g-compute-ts-sdk");
 import type { Signal, ConfigSignal, AnomalySignal, RiskScore, AgentStatus } from "../../transport/src/types.js";
 import { resolveENSConfig } from "../../transport/src/ens.js";
 import { createTransport } from "../../transport/src/factory.js";
@@ -43,35 +45,34 @@ async function callZeroGCompute(prompt: string): Promise<{ result: any; attestat
   }
 
   try {
-    const { createZGServingNetworkBroker } = await import("@0glabs/0g-serving-broker");
     const provider = new JsonRpcProvider(ZG_RPC_URL);
     const wallet = new Wallet(ZG_PRIVATE_KEY, provider);
-    const broker = await createZGServingNetworkBroker(wallet);
+    const broker = await createZGComputeNetworkBroker(wallet);
 
-    const headers = await broker.inference.getRequestHeaders(
-      ZG_PROVIDER_ADDRESS,
-      ZG_MODEL,
-      prompt,
-    );
+    const { endpoint, model } = await broker.inference.getServiceMetadata(ZG_PROVIDER_ADDRESS);
+    const headers = await broker.inference.getRequestHeaders(ZG_PROVIDER_ADDRESS);
 
-    const response = await fetch(`https://${ZG_PROVIDER_ADDRESS}/v1/chat/completions`, {
+    console.log(`[risk-agent] 0G Compute → ${endpoint} (model: ${model})`);
+
+    const response = await fetch(`${endpoint}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers },
       body: JSON.stringify({
-        model: ZG_MODEL,
+        model,
         messages: [{ role: "user", content: prompt }],
         temperature: 0.3,
       }),
     });
 
     const data = await response.json();
-    const attestation = response.headers.get("ZG-Res-Key") ?? undefined;
 
-    if (attestation) {
+    let attestation = response.headers.get("ZG-Res-Key") ?? response.headers.get("zg-res-key");
+    const chatID = attestation || data.id;
+
+    if (chatID) {
       try {
-        const chatID = data.id;
         await broker.inference.processResponse(ZG_PROVIDER_ADDRESS, chatID);
-        console.log("[risk-agent] 0G attestation verified");
+        console.log("[risk-agent] 0G TEE attestation verified");
       } catch (err) {
         console.warn("[risk-agent] attestation verification failed:", (err as Error).message);
       }
@@ -79,7 +80,7 @@ async function callZeroGCompute(prompt: string): Promise<{ result: any; attestat
 
     const content = data.choices?.[0]?.message?.content ?? "";
     const parsed = JSON.parse(content.replace(/```json?\n?/g, "").replace(/```/g, "").trim());
-    return { result: parsed, attestation };
+    return { result: parsed, attestation: attestation ?? undefined };
   } catch (err) {
     console.error("[risk-agent] 0G Compute call failed:", (err as Error).message);
     console.warn("[risk-agent] falling back to rule-based scoring");

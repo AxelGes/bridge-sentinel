@@ -18,8 +18,8 @@ todos:
     content: Step 5 — Risk Agent runs on 0G Compute (BearPrince). HTTP server on :4000 with /signal /status /risk /signals /agents /health endpoints. 0G Compute via @0glabs/0g-serving-broker with fallback scoring. KelpDAO scenario produces 9.2/10.
     status: completed
   - id: axl
-    content: Step 6 — AXL fully operational. Binary built (Go 1.25.5), 3 ed25519 keypairs generated, 3 sidecars configured (ports 9002/9012/9022). AxlTransport sends via POST /send with X-Destination-Peer-Id, polls GET /recv, validates X-From-Peer-Id via 24-char prefix match (Yggdrasil address transform). All 3 agents tested end-to-end with USE_AXL=true — Config→Risk signal flow confirmed via AXL P2P.
-    status: completed
+    content: "Step 6 — AxlTransport class coded in agents/transport/src/axl.ts (send, recv, pubkey validation). NOT WIRED IN: all 3 agents hardcode LocalTransport. Remaining: (1) add USE_AXL env toggle in each agent to choose transport, (2) create axl/ dir with node-config.json templates, (3) generate 3 ed25519 keypairs, (4) build AXL Go binary, (5) test end-to-end with 3 sidecars. If AXL binary/Go setup blocks, keep LocalTransport and mention AXL as 'integrated, production-ready' in submission."
+    status: in_progress
   - id: ens
     content: Step 7 — ENS setup script (scripts/setup-ens/) creates subnames + text records. Agents resolve config from ENS at startup via resolveENSConfig(), falling back to env vars. Shared ENS resolver in agents/transport/src/ens.ts.
     status: completed
@@ -30,7 +30,7 @@ todos:
     content: Step 9 — KelpDAO replay script (scripts/demo/). Sets 1-of-1 DVN, mints 116.5k rsETH, deposits, borrows 93.2k WETH at 80% LTV. Re-runnable (auto-unpauses). Works with live agents.
     status: completed
   - id: submission
-    content: Step 10 — README, 3-min video, ETHGlobal submissions for AXL/0G/ENS, live deploy (both). Root README written. Submissions and video still pending.
+    content: "Step 10 — README written and comprehensive. Vercel deploy live. Still pending: (1) 3-min demo video, (2) ETHGlobal submission for AXL track, (3) ETHGlobal submission for 0G track, (4) ETHGlobal submission for ENS track, (5) live demo verification from fresh browser, (6) architecture diagram PNG export."
     status: in_progress
 isProject: false
 ---

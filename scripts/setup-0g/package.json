@@ -1,19 +1,17 @@
 {
-  "name": "risk-agent",
+  "name": "setup-0g",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts"
+    "dev": "tsx index.ts",
+    "start": "tsx index.ts"
   },
   "dependencies": {
     "@0gfoundation/0g-compute-ts-sdk": "^0.8.0",
     "dotenv": "^16.4.5",
-    "ethers": "^6.13.4",
-    "viem": "^2.21.54"
+    "ethers": "^6.13.4"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
-    "typescript": "^5.8.3"
+    "tsx": "^4.19.2"
   }
 }
