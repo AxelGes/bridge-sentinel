@@ -71,8 +71,6 @@ async function poll() {
     const score = scoreDVN(requiredNum, dvnCount);
 
     if (score !== lastScore) {
-      lastScore = score;
-
       const signal: ConfigSignal = {
         type: "config",
         protocol: "KelpDAO",
@@ -87,9 +85,11 @@ async function poll() {
 
       try {
         await transport.send(sendTarget, signal);
+        lastScore = score;
         console.log("[config-agent] signal sent to risk agent");
       } catch (err) {
-        console.warn("[config-agent] failed to send signal:", (err as Error).message);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn("[config-agent] failed to send signal:", msg);
       }
     }
   } catch (err) {
